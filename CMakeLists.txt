@@ -13,7 +13,7 @@ pico_sdk_init()
 # rest of your project
 add_executable(main
     src/main.cpp
-    src/BMP280.h
+    src/BMP280.hpp
     src/BMP280.cpp
 )
 

@@ -18,11 +18,15 @@
 #pragma endregion
 
 namespace BMP280{
-
     enum PowerMode{
         Sleep = 0,
         Forced = 1, 
         Normal = 2
+    };
+
+    enum Type{
+        Temperature,
+        Presure
     };
 
     class BMP280{
@@ -32,12 +36,16 @@ namespace BMP280{
         uint8_t getChipID() const;
         int32_t getData(uint8_t reg, bool burst);
 
-        bool setRegister(uint8_t reg, uint8_t config);
+        bool setRegister(uint8_t reg, uint8_t config, bool check = false);
         uint8_t readRegister(uint8_t reg);
 
-        bool setPowerMode(PowerMode mode);
+        bool setPowerMode(PowerMode mode, bool check = false);
         PowerMode readPowerMode();
         PowerMode getPowerMode() const;
+
+        bool setOversampling(Type type, uint8_t oversampling, bool check = false);
+        uint8_t readOversampling(Type type);
+        uint8_t getOversampling(Type type) const;
 
         int32_t readRawTemperature();
         int32_t getRawTemperature() const;
@@ -50,6 +58,8 @@ namespace BMP280{
         spi_inst_t *_spiInst;
         uint _cs;
         uint8_t _chipID;
+        uint8_t _temperatureOversampling;
+        uint8_t _presureOversampling;
 
         PowerMode _powerMode;
 
