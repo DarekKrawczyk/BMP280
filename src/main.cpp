@@ -35,7 +35,7 @@ int main() {
     spi_write_blocking(spi0, &data, 1);
     spi_read_blocking(spi0, 0, &chipID, 1);
 
-    //Temperature oversampling x1, presure oversampling x1 0x27
+    //Temperature oversampling x1, pressure oversampling x1 0x27
     bmp280.setRegister(0xF4, 0b11101011, true);
     int counter = 0;
     while(true){
@@ -43,61 +43,56 @@ int main() {
         //chipID = bmp280.getData(chip_id, false);
         //printf("Chip ID: %#x\n", chipID);
         //printf("Temperature: %i\n", bmp280.readRawTemperature());
-        //printf("Temperature: %f[C]\n", bmp280.readTemperature());
+        printf("Temperature: %f[C]\n", bmp280.readTemperature());
         //printf("Register: %#x\n", bmp280.getData(0xF4, false));
-        if(counter==0){
-            //bmp280.setPowerMode(BMP280::PowerMode::Sleep);
-            bmp280.setOversampling(BMP280::Type::Temperature, 0);
-            sleep_ms(100);
-            bmp280.setOversampling(BMP280::Type::Presure, 0);
-        }
-        if(counter==10){
-           //bmp280.setPowerMode(BMP280::PowerMode::Forced); 
-           bmp280.setOversampling(BMP280::Type::Temperature, 1);
-           sleep_ms(100);
-           bmp280.setOversampling(BMP280::Type::Presure, 1);
-        }
-        if(counter==20){
-            //bmp280.setPowerMode(BMP280::PowerMode::Normal);
-            bmp280.setOversampling(BMP280::Type::Temperature, 2);
-            sleep_ms(100);
-            bmp280.setOversampling(BMP280::Type::Presure, 2);
-        }
-        if(counter==30){
-            //bmp280.setPowerMode(BMP280::PowerMode::Normal);
-            bmp280.setOversampling(BMP280::Type::Temperature, 4);
-            sleep_ms(100);
-            bmp280.setOversampling(BMP280::Type::Presure, 4);
-        }
-        if(counter==40){
-            //bmp280.setPowerMode(BMP280::PowerMode::Normal);
-            bmp280.setOversampling(BMP280::Type::Temperature, 8);
-            sleep_ms(100);
-            bmp280.setOversampling(BMP280::Type::Presure, 8);
-        }        
-        if(counter==50){
-            //bmp280.setPowerMode(BMP280::PowerMode::Normal);
-            bmp280.setOversampling(BMP280::Type::Temperature, 16);
-            sleep_ms(100);
-            bmp280.setOversampling(BMP280::Type::Presure, 16);
-        }
-        counter++;
-        if(counter==60){
-            counter=0;
-        }
-        printf("Counter: %i\n", counter);
+        // if(counter==0){
+        //     //bmp280.setPowerMode(BMP280::PowerMode::Sleep);
+        //     bmp280.setOversampling(BMP280::Type::Temperature, 0);
+        //     sleep_ms(100);
+        //     bmp280.setOversampling(BMP280::Type::Pressure, 0);
+        // }
+        // if(counter==10){
+        //    //bmp280.setPowerMode(BMP280::PowerMode::Forced); 
+        //    bmp280.setOversampling(BMP280::Type::Temperature, 1);
+        //    sleep_ms(100);
+        //    bmp280.setOversampling(BMP280::Type::Pressure, 1);
+        // }
+        // if(counter==20){
+        //     //bmp280.setPowerMode(BMP280::PowerMode::Normal);
+        //     bmp280.setOversampling(BMP280::Type::Temperature, 2);
+        //     sleep_ms(100);
+        //     bmp280.setOversampling(BMP280::Type::Pressure, 2);
+        // }
+        // if(counter==30){
+        //     //bmp280.setPowerMode(BMP280::PowerMode::Normal);
+        //     bmp280.setOversampling(BMP280::Type::Temperature, 4);
+        //     sleep_ms(100);
+        //     bmp280.setOversampling(BMP280::Type::Pressure, 4);
+        // }
+        // if(counter==40){
+        //     //bmp280.setPowerMode(BMP280::PowerMode::Normal);
+        //     bmp280.setOversampling(BMP280::Type::Temperature, 8);
+        //     sleep_ms(100);
+        //     bmp280.setOversampling(BMP280::Type::Pressure, 8);
+        // }        
+        // if(counter==50){
+        //     //bmp280.setPowerMode(BMP280::PowerMode::Normal);
+        //     bmp280.setOversampling(BMP280::Type::Temperature, 16);
+        //     sleep_ms(100);
+        //     bmp280.setOversampling(BMP280::Type::Pressure, 16);
+        // }
+        // counter++;
+        // if(counter==60){
+        //     counter=0;
+        // }
+        // printf("Counter: %i\n", counter);
         //printf("Power mode: %i\n", bmp280.readPowerMode());
         //printf("ChipID: %#x\n", bmp280.readForChipID());
         printf("Temperature oversampling: %i\n", bmp280.readOversampling(BMP280::Type::Temperature));
-        printf("Presure oversampling: %i\n", bmp280.readOversampling(BMP280::Type::Presure));
+        printf("Pressure oversampling: %i\n", bmp280.readOversampling(BMP280::Type::Pressure));
+        printf("Pressure: %f[Pa]\n", bmp280.readPressure());
+        printf("Pressure: %f[hPa]\n", bmp280.readPressure(1));
         printf("---------- END ----------\n\n\n");
         sleep_ms(1000);
     }
 }
-
-/*  TODO:
-    - PowerMode - done
-    - Temperature - done
-    - Presure - ...
-    - other functionalities
-*/

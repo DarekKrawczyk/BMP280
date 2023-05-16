@@ -17,6 +17,8 @@
 #define TEMP_XLSB 0xFC
 #pragma endregion
 
+//Module datasheet: https://www.bosch-sensortec.com/media/boschsensortec/downloads/datasheets/bst-bmp280-ds001.pdf
+
 namespace BMP280{
     enum PowerMode{
         Sleep = 0,
@@ -26,12 +28,14 @@ namespace BMP280{
 
     enum Type{
         Temperature,
-        Presure
+        Pressure
     };
 
     class BMP280{
     public:
         BMP280(spi_inst_t *spi, uint cs);
+        ~BMP280();
+
         uint8_t readForChipID();
         uint8_t getChipID() const;
         int32_t getData(uint8_t reg, bool burst);
@@ -43,6 +47,8 @@ namespace BMP280{
         PowerMode readPowerMode();
         PowerMode getPowerMode() const;
 
+        void reset();
+
         bool setOversampling(Type type, uint8_t oversampling, bool check = false);
         uint8_t readOversampling(Type type);
         uint8_t getOversampling(Type type) const;
@@ -52,23 +58,26 @@ namespace BMP280{
         double readTemperature();
         double getTemperature() const;
 
-        uint32_t readPresure();
-        uint32_t getPresure() const;
+        uint32_t readRawPressure();
+        uint32_t getRawPressure() const;
+        double readPressure(int unit = 0);
+        double getPressure(int unit = 0) const;
     private:
         spi_inst_t *_spiInst;
         uint _cs;
         uint8_t _chipID;
         uint8_t _temperatureOversampling;
-        uint8_t _presureOversampling;
+        uint8_t _pressureOversampling;
 
         PowerMode _powerMode;
 
         int32_t _rawTemperature;
         double _temperature;
 
-        uint32_t _presure;
+        uint32_t _rawPressure;
+        double _pressure;
 
-        //Trimming parameters
+        int32_t _tFine;
         uint16_t dig_T1;
         int16_t dig_T2;
         int16_t dig_T3;

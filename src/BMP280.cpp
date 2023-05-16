@@ -1,9 +1,18 @@
 #include "BMP280.hpp"
+#define DEBUG true  
 
-#define DEBUG_REGISTER
+#if DEBUG == true
+    #define DEBUG_REGISTER
+    #define DEBUG_PRESSURE
+#endif
 
 namespace BMP280
 {
+    // ---------------- Constructor/Destructor ----------------
+    #pragma region Constructor/Destructor
+    /// @brief Default Constructor.
+    /// @param spi Instance of SPI.
+    /// @param cs Index of Chip-select Pin.
     BMP280::BMP280(spi_inst_t *spi, uint cs)
     {
         _spiInst = spi;
@@ -11,9 +20,21 @@ namespace BMP280
         gpio_init(_cs);
         gpio_set_dir(_cs, true);
         gpio_put(_cs, true);
+
+        //Default configuration.
+        _powerMode = PowerMode::Sleep;
         this->getTrimmingParameters();
-        _powerMode = PowerMode::Sleep; // Default config
+        this->setOversampling(Type::Temperature, 8);
+        sleep_ms(100);
+        this->setOversampling(Type::Pressure, 8);
+        sleep_ms(100);
     }
+
+    /// @brief Default destructor.
+    BMP280::~BMP280(){
+
+    }
+    #pragma endregion
 
     uint8_t BMP280::readForChipID()
     {
@@ -59,7 +80,7 @@ namespace BMP280
     }
 
     // ---------------- Register ----------------
-
+    #pragma region Register
     /// @brief Set value of specified register. After setting check parameter to true, 
     /// @brief sends SPI command to read value of this register. Defalut value of check
     /// @brief is set to False. If check is set to false,
@@ -88,12 +109,12 @@ namespace BMP280
         if (value != config)
         {
             #ifdef DEBUG_REGISTER
-            printf("Register NOT set\n");
+            printf("REGISTER NOT set\n");
             #endif
             return false;
         }
         #ifdef DEBUG_REGISTER
-        printf("Register set\n");
+        printf("REGISTER set\n");
         #endif
         return true;
     }
@@ -111,9 +132,10 @@ namespace BMP280
         gpio_put(_cs, true);
         return buffer;
     }
+    #pragma endregion
 
     // ---------------- Power mode ----------------
-
+    #pragma region PowerMode
     /// @brief Set power mode of BMP280 sensor.
     /// @param mode PowerMode enum to set.
     /// @return true if action succeded, otherwise false.
@@ -172,11 +194,12 @@ namespace BMP280
     {
         return _powerMode;
     }
+    #pragma endregion
 
     // ---------------- Oversampling ----------------
-
+    #pragma region Oversampling
     /// @brief Set oversampling of BMP280 sensor via SPI command.
-    /// @param type Type::Temperature or Type::Presure.
+    /// @param type Type::Temperature or Type::Pressure.
     /// @param oversampling Accetps uint8_t values = {0, 1, 2, 4, 8, 16 }.
     /// @param check Default value is set to false. True - check if value was set, False - dont check.
     /// @return True if register was set with given value, otherwise False.
@@ -213,7 +236,7 @@ namespace BMP280
             value <<= 5;
             registerValue = ((registerValue & 0b00011111) | value);
             break;
-            case Type::Presure:
+            case Type::Pressure:
             value <<= 2;
             registerValue = ((registerValue & 0b11100011) | value);
             break;
@@ -224,8 +247,8 @@ namespace BMP280
                 case Type::Temperature:
                     _temperatureOversampling = oversampling;
                     break;
-                case Type::Presure:
-                    _presureOversampling = oversampling;
+                case Type::Pressure:
+                    _pressureOversampling = oversampling;
                     break;
             }
         }
@@ -233,14 +256,14 @@ namespace BMP280
     }
 
     /// @brief Read current temperature oversampling via SPI command.
-    /// @param type Type::Temperature or Type::Presure.
+    /// @param type Type::Temperature or Type::Pressure.
     /// @return Value of the oversampling setting.
     uint8_t BMP280::readOversampling(Type type){
         uint8_t reg = this->readRegister(CTRL_MEAS);
         uint8_t result = 0;
         switch (type)
         {
-        case Type::Presure:
+        case Type::Pressure:
             reg &= 0b00011100;
             reg >>= 2;
             if(reg == 0){
@@ -256,7 +279,7 @@ namespace BMP280
             } else{
                 result = 16;
             }
-            _presureOversampling = result;
+            _pressureOversampling = result;
             return result;
             break;
         case Type::Temperature:
@@ -285,33 +308,36 @@ namespace BMP280
     }
 
     /// @brief Get oversampling value of object variable.
-    /// @param type Type::Temperature or Type::Presure.
+    /// @param type Type::Temperature or Type::Pressure.
     /// @return Oversampling config.
     uint8_t BMP280::getOversampling(Type type) const{
         switch(type){
             case Type::Temperature:
                 return _temperatureOversampling;
                 break;
-            case Type::Presure:
-                return _presureOversampling;
+            case Type::Pressure:
+                return _pressureOversampling;
                 break;
             default:
                 return 0x00;
                 break;
         }
     }
+    #pragma endregion
 
     // ---------------- Temperature ----------------
-
+    #pragma region Temperature
     /// @brief Read current temperature in raw format via SPI command.
     /// @return Temperature in raw format.
     int32_t BMP280::readRawTemperature()
     {
+        //Based of datasheet formula.
         int32_t adc_T = this->getData(TEMP_MSB, true);
         int32_t var1, var2, temp;
         var1 = ((((adc_T >> 3) - ((int32_t)dig_T1 << 1))) * ((int32_t)dig_T2)) >> 11;
         var2 = (((((adc_T >> 4) - ((int32_t)dig_T1)) * ((adc_T >> 4) - ((int32_t)dig_T1))) >> 12) * ((int32_t)dig_T3)) >> 14;
-        temp = (((var1 + var2)) * 5 + 128) >> 8;
+        _tFine = var1 + var2;
+        temp = (_tFine * 5 + 128) >> 8;
         _rawTemperature = temp;
         return temp;
     }
@@ -338,22 +364,75 @@ namespace BMP280
     {
         return _temperature;
     }
+    #pragma endregion
 
-    // ---------------- Temperature ----------------
-
-    uint32_t BMP280::readPresure()
+    // ---------------- Pressure ----------------
+    #pragma region Pressure
+    /// @brief Read current pressure in raw format via SPI command.
+    /// @return Pressure in raw format.
+    uint32_t BMP280::readRawPressure()
     {
-        uint32_t presure;
-        return presure;
+        //Based on datasheet formula.
+        int32_t adc_P = this->getData(PRESS_MSB, true);
+        #ifdef DEBUG_PRESSURE
+        printf("PRESSURE - data from register: %i\n", adc_P);
+        #endif
+        int64_t var1, var2, p;
+        var1 = ((int64_t)this->_tFine) - 128000;
+        var2 = var1 * var1 * (int64_t)this->dig_P6;
+        var2 = var2 + ((var1*(int64_t)this->dig_P5)<<17);
+        var2 = var2 + (((int64_t)this->dig_P4)<<35);
+        var1 = ((var1 * var1 * (int64_t)this->dig_P3)>>8) + ((var1 * (int64_t)this->dig_P2)<<12);
+        var1 = (((((int64_t)1)<<47)+var1)) * ((int64_t)this->dig_P1)>>33;
+        if(var1 == 0){
+            return 0;
+        }
+        p = 1048576 - adc_P;
+        p = (((p<<31)-var2)*3125)/var1;
+        var1 = (((int64_t)this->dig_P9)*(p>>13)*(p>>13))>>25;
+        var2 = (((int64_t)this->dig_P8)*p)>>19;
+        p = ((p+var1+var2) >> 8) + (((int64_t)this->dig_P7)<<4);
+        _rawPressure = (uint32_t)p;
+        #ifdef DEBUG_PRESSURE
+        printf("PRESSURE - pressure after calculation: %i\n", p);
+        #endif
+        return _rawPressure;
     }
 
-    uint32_t BMP280::getPresure() const
+    /// @brief Get pressure of object variable.
+    /// @return Pressure in raw format.
+    uint32_t BMP280::getRawPressure() const
     {
-        return _presure;
+        return _rawPressure;
     }
+
+    /// @brief Read pressure in celsius deg double format via SPI command.
+    /// @param unit If != 0 method returns pressure in [hPa], returns pressure in [Pa] by default.
+    /// @return Pressure [Pa] or [hPa] in double.
+    double BMP280::readPressure(int unit)
+    {
+        double pressure = this->readRawPressure() / 256;
+        _pressure = pressure;
+        return (unit == 0 ? pressure : ( pressure / 100.0));
+    }
+
+    /// @brief Get pressure of object variable.
+    /// @param unit If != 0 method returns pressure in [hPa], returns pressure in [Pa] by default.
+    /// @return Pressure [Pa] or [hPa] in double.
+    double BMP280::getPressure(int unit) const
+    {
+        return (unit == 0 ? _pressure : (_pressure / 100.0));
+    }
+    #pragma endregion
 
     // ---------------- Utilities ----------------
+    #pragma region Utilities
+    /// @brief Power on reset of BMP280 module.
+    void BMP280::reset(){
+        this->setRegister(RESET, 0xB6);
+    }
 
+    /// @brief Get trimming parameters required to calculate temperature and pressure.
     void BMP280::getTrimmingParameters()
     {
         uint8_t reg = 0x88 | 0x80;
@@ -375,4 +454,5 @@ namespace BMP280
         dig_P8 = (buffer[21] << 8) | buffer[20];
         dig_P9 = (buffer[23] << 8) | buffer[22];
     }
+    #pragma endregion
 }
